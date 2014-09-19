@@ -67,25 +67,19 @@ ATF_TC_BODY(p_array, tc)
 {
 	struct p_array *a;
 
-	a = p_array_new(0);
+	a = p_array_new();
 	ATF_REQUIRE(a != NULL);
-	ATF_REQUIRE_EQ(a->step, BUFSIZ);
-
-	p_array_free(a);
-
-	a = p_array_new(2);
-	ATF_REQUIRE(a != NULL);
-	ATF_REQUIRE_EQ(a->step, 2);
 	ATF_REQUIRE_EQ(a->cap, 0);
 	ATF_REQUIRE_EQ(a->len, 0);
 
 	p_array_push(a, "plop");
+	ATF_REQUIRE_EQ(a->cap, 64);
 	ATF_REQUIRE_EQ(p_array_len(a), 1);
 	ATF_REQUIRE_STREQ(p_array_get(a, 0), "plop");
 
 	p_array_push(a, "new");
 	p_array_push(a, "again");
-	ATF_REQUIRE_EQ(a->cap, 4);
+	ATF_REQUIRE_EQ(a->cap, 64);
 	ATF_REQUIRE_EQ(a->len, 3);
 	ATF_REQUIRE_STREQ(p_array_get(a, 0), "plop");
 	ATF_REQUIRE_STREQ(p_array_get(a, 1), "new");

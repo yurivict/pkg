@@ -30,10 +30,9 @@ struct p_array {
 	void **data;
 	size_t cap;
 	size_t len;
-	size_t step;
 };
 
-struct p_array *p_array_new(size_t sz);
+struct p_array *p_array_new(void);
 void p_array_free(struct p_array *a);
 void p_array_reset(struct p_array *a);
 void p_array_flush(struct p_array *a);

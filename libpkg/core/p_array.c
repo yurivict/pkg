@@ -27,26 +27,40 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "p_array.h"
 
-static int
-p_array_grow(struct p_array *a)
+#define p_roundup2(x,y) (((x)+((y)-1))&(~((y)-1))) /* if y is powers of two */
+#define STRSIZE 4096
+#define STEPS 64
+
+static bool
+p_array_grow(struct p_array *a, size_t size)
 {
-	a->cap += a->step;
+	size_t newsize;
+
+	if (size < STRSIZE) {
+		newsize = STEPS;
+		while (newsize < size)
+			newsize *=2;
+	} else {
+		newsize = p_roundup2(size, STRSIZE);
+	}
+
+	a->cap = newsize;
 	a->data = reallocf(a->data, a->cap * sizeof(void *));
 	if (a->data == NULL)
-		return (0);
+		return (false);
 
-	return (1);
+	return (true);
 }
 
 struct p_array *
-p_array_new(size_t sz) {
+p_array_new(void) {
 	struct p_array *a;
 
 	a = calloc(1, sizeof(struct p_array));
-	a->step = sz ? sz : BUFSIZ;
 
 	return (a);
 }
@@ -79,10 +93,11 @@ p_array_push(struct p_array *a, void *data)
 {
 
 	if (a->len + 1 > a->cap)
-		if (!p_array_grow(a))
+		if (!p_array_grow(a, a->len + 1))
 			return (0);
 
 	a->data[a->len++] = data;
+
 	return (1);
 }
 
