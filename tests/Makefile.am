@@ -40,6 +40,19 @@ pkg_add_dir_to_del_SOURCES=	lib/pkg_add_dir_to_del.c
 pkg_add_dir_to_del_CFLAGS=	$(PRIVATE_INCS)
 pkg_add_dir_to_del_LDADD=	$(GENERIC_LDADD)
 
+pstring_SOURCES=	lib/string.c
+pstring_CFLAGS=		$(PRIVATE_INCS)
+pstring_LDADD=		$(GENERIC_LDADD)
+
+parray_SOURCES=		lib/array.c
+parray_CFLAGS=		$(PRIVATE_INCS)
+parray_LDADD=		$(GENERIC_LDADD)
+
+phash_SOURCES=		lib/hash.c
+phash_CFLAGS=		$(PRIVATE_INCS)
+phash_LDADD=		$(GENERIC_LDADD)
+
+EXTRA_DIST=	frontend/png.uclin \
 EXTRA_DIST=	frontend/png.uclin \
 		frontend/sqlite3.uclin \
 		Kyuafile \
@@ -55,7 +68,10 @@ TESTS =
 tests_programs=	pkg_printf \
 		pkg_validation \
 		plist \
-		pkg_add_dir_to_del
+		pkg_add_dir_to_del \
+		pstring \
+		parray \
+		phash
 EXTRA_PROGRAMS=	$(tests_programs)
 check_PROGRAMS=	$(tests_programs)
 check_SCRIPTS=	frontend/pkg.sh \

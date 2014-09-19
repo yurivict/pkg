@@ -284,6 +284,7 @@ AC_CONFIG_FILES(Makefile \
 		docs/Makefile \
 		tests/Makefile \
 		libpkg/Makefile \
+		libpkg/core/Makefile \
 		libpkg/repo/Makefile \
 		libpkg/pkg.h \
 		libpkg/pkg.pc

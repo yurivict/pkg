@@ -57,6 +57,7 @@ libpkg_la_LIBADD=	$(top_builddir)/external/libucl.la \
 			$(top_builddir)/external/libexpat.la \
 			$(top_builddir)/external/libsbuf.la \
 			$(top_builddir)/external/libpicosat.la \
+			$(top_builddir)/libpkg/core/libcore.la \
 			@REPOS_LDADD@ \
 			@LIBELF_LIB@ \
 			@LIBEXECINFO_LIB@ \
@@ -81,6 +82,7 @@ libpkg_static_la_LIBADD=	$(top_builddir)/external/libucl_static.la \
 			$(top_builddir)/external/libexpat_static.la \
 			$(top_builddir)/external/libpicosat_static.la \
 			$(top_builddir)/external/libsbuf_static.la \
+			$(top_builddir)/libpkg/core/libcore_static.la \
 			@REPOS_LDADD_STATIC@
 
 EXTRA_libpkg_static_la_DEPENDENCIES=	@REPOS_LDADD_STATIC@ libpkg.ver
@@ -97,4 +99,4 @@ noinst_HEADERS=		private/db_upgrades.h \
 			private/utils.h \
 			private/pkg_jobs.h
 
-SUBDIRS = repo .
+SUBDIRS = repo core .
