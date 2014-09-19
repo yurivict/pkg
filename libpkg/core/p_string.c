@@ -73,7 +73,7 @@ p_string_free(struct p_string *p)
 }
 
 int
-p_string_append(struct p_string *p, char *str, size_t len)
+p_string_append(struct p_string *p, const char *str, size_t len)
 {
 	if (str == NULL)
 		return (0);
