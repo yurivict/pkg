@@ -38,7 +38,11 @@ struct p_string *p_string_new(size_t sz);
 void p_string_reset(struct p_string *p);
 void p_string_free(struct p_string *p);
 
+#define p_string_cpy(p, s) p_string_copy(p, s, 0)
+#define p_string_cat(p, s) p_string_append(p, s, 0)
+
 int p_string_append(struct p_string *p, const char *str, size_t len);
+int p_string_copy(struct p_string *p, const char *str, size_t len);
 char *p_string_data(struct p_string *p);
 void p_string_trim(struct p_string *p);
 void p_string_rtrim(struct p_string *p);

@@ -92,6 +92,28 @@ p_string_append(struct p_string *p, const char *str, size_t len)
 	return (1);
 }
 
+int
+p_string_copy(struct p_string *p, const char *str, size_t len)
+{
+	if (str == NULL)
+		return (0);
+
+	if (len == 0)
+		len = strlen(str);
+
+	p_string_reset(p);
+
+	while (len >= p->cap)
+		if (!p_string_grow(p))
+			return (0);
+
+	memcpy(p->buf, str, len);
+	p->len = len;
+	nullterm(p);
+
+	return (1);
+}
+
 char *
 p_string_data(struct p_string *p)
 {
