@@ -35,19 +35,6 @@
 #define STEPS 64
 
 static unsigned int
-bernstein_hash(const void *key, unsigned int limit, unsigned int seed)
-{
-	int c;
-	unsigned int hash = seed;
-	const char *k = (const char *)key;
-
-	while ((c = *k++) != '\0')
-		hash = (hash * 33) + c;
-
-	return (hash % limit);
-}
-
-static unsigned int
 jen_hash(const void *key, unsigned int limit, unsigned int seed)
 {
 	unsigned int hash = seed;
