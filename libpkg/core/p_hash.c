@@ -30,13 +30,9 @@
 
 #include "p_hash.h"
 
-struct p_hash_entry {
-	unsigned int index;
-	char *key;
-	void *value;
-	void (*free)(void *);
-	struct p_hash_entry *next;
-};
+#define p_roundup2(x,y) (((x)+((y)-1))&(~((y)-1))) /* if y is powers of two */
+#define STRSIZE 4096
+#define STEPS 64
 
 static unsigned int
 bernstein_hash(const void *key, unsigned int limit, unsigned int seed)
@@ -51,8 +47,28 @@ bernstein_hash(const void *key, unsigned int limit, unsigned int seed)
 	return (hash % limit);
 }
 
+static unsigned int
+jen_hash(const void *key, unsigned int limit, unsigned int seed)
+{
+	unsigned int hash = seed;
+	const char *k = (const char *)key;
+	int c;
+
+	while ((c = *k++) != '\0') {
+		hash += c;
+		hash += (hash << 10);
+		hash ^= (hash >> 6);
+	}
+	hash += (hash << 3);
+	hash ^= (hash >> 11);
+	hash += (hash << 15);
+
+	return (hash & (limit -1));
+}
+
+
 struct p_hash *
-p_hash_new(size_t sz, unsigned int (*hash_func)(const void*, unsigned int, unsigned int))
+p_hash_new(unsigned int (*hash_func)(const void*, unsigned int, unsigned int))
 {
 	struct p_hash *h;
 
@@ -60,10 +76,9 @@ p_hash_new(size_t sz, unsigned int (*hash_func)(const void*, unsigned int, unsig
 	if (h == NULL)
 		return (NULL);
 
-	h->step = sz ? sz : BUFSIZ;
-	h->cap = h->step;
+	h->cap = STEPS;
 	h->table = calloc(h->cap, sizeof(struct p_hash_entry *));
-	h->hash = hash_func ? hash_func : bernstein_hash;
+	h->hash = hash_func ? hash_func : jen_hash;
 
 	return (h);
 }
@@ -71,19 +86,21 @@ p_hash_new(size_t sz, unsigned int (*hash_func)(const void*, unsigned int, unsig
 static void
 p_hash_disconnect_entry(struct p_hash *h, struct p_hash_entry *e)
 {
-	struct p_hash_entry *cur, **prev;
+	struct p_hash_entry *prev;
 
-	cur = h->table[e->index];
-	prev = &(h->table[e->index]);
-	while (cur != NULL) {
-		if (cur == e)
-			break;
-		prev = &(cur->next);
-		cur = cur->next;
-	}
-	*prev = e->next;
-	h->cap--;
+	h->table[e->index] = NULL;
+
 	h->len--;
+
+	if (e == h->first) {
+		h->first = e->next;
+		return;
+	}
+
+	for (prev = h->first; prev != NULL && prev->next != e; prev = prev->next);
+
+	if (prev != NULL)
+		prev->next = e->next;
 }
 
 static void
@@ -100,20 +117,14 @@ p_hash_entry_free(struct p_hash *h, struct p_hash_entry *e)
 void
 p_hash_free(struct p_hash *h)
 {
-	size_t i;
-	struct p_hash_entry *cur, *next;
+	struct p_hash_entry *e;
 
 	if (h == NULL)
 		return;
 
-	for (i = 0; i < h->cap; i++) {
-		cur = h->table[i];      
-		while (cur != NULL) {
-			next = cur->next;
-			p_hash_entry_free(h, cur);
-			cur = next;
-		}
-	}
+	while ((e = h->first))
+		p_hash_entry_free(h, e);
+
 	free(h);
 }
 
@@ -121,30 +132,27 @@ static int
 p_hash_grow(struct p_hash *h)
 {
 	struct p_hash_entry **ntable;
-	struct p_hash_entry *cur, *next;
-	size_t i;
+	struct p_hash_entry *cur;
 	size_t ni;
 	size_t ncap;
 
 	ncap = h->cap;
-	ncap += h->step;
+	ncap *= 2;
+	ncap = p_roundup2(ncap, STRSIZE);
 
 	ntable = calloc(ncap, sizeof(struct p_hash_entry *));
 	if (ntable == NULL)
 		return (0);
 
 	/* rehash to take in account new hash table size */
-	for (i = 0; i < h->cap; i++) {
-		cur = h->table[i];
-		while (cur != NULL) {
-			next = cur->next;
-			ni = h->hash(cur->key, h->cap, 0);
-			cur->index = ni;
-			cur->next = ntable[ni];
-			ntable[ni] = cur;
-			cur = next;
-		}
+	for (cur = h->first; cur != NULL; cur = cur->next) {
+		h->last = cur;
+		ni = h->hash(cur->key, ncap, 0);
+		cur->index = ni;
+		ntable[ni] = cur;
 	}
+	/* Ensure last is alwasy NULL */
+	h->last->next = NULL;
 	free(h->table);
 	h->table = ntable;
 	h->cap = ncap;
@@ -182,17 +190,23 @@ p_hash_insert(struct p_hash *h, const char *key, void *value, void (*freecb)(voi
 		if (!p_hash_grow(h))
 			return (0);
 
-
 	e = calloc(1, sizeof(struct p_hash_entry));
 	if (e == NULL)
 		return (0);
 
+	if (h->last != NULL)
+		h->last->next = e;
+	if (h->first == NULL)
+		h->first = e;
+
 	e->key = strdup(key);
 	e->value = value;
 	e->free = freecb;
-	e->index = h->cache;
-	e->next = h->table[h->cache];
-	h->table[h->cache] = e;
+	e->index = h->hash(e->key, h->cap, 0);
+	e->next = NULL;
+	h->last = e;
+	h->last->next = NULL;
+	h->table[e->index] = e;
 	h->len++;
 
 	return (1);
@@ -257,7 +271,10 @@ p_hash_rename(struct p_hash *h, const char *okey, const char *nkey)
 	free(old->key);
 	old->key = strdup(nkey);
 	old->index = h->cache;
-	old->next = h->table[h->cache];
+	if (h->first == NULL)
+		h->first = old;
+	h->last = old;
+	old->next = NULL;
 	h->table[h->cache] = old;
 	h->len++;
 
@@ -273,49 +290,24 @@ p_hash_len(struct p_hash *h)
 int
 p_hash_foreach(struct p_hash *h, int (*cb)(const char *key, void *data, void *cookie), void *cookie)
 {
-	struct p_hash_entry *cur;
+	struct p_hash_entry *e;
 
-	cur = p_hash_first(h);
-	while (cur != NULL) {
-		if (!cb(cur->key, cur->value, cookie))
+	for (e = h->first ; e != NULL; e = e->next) {
+		if (!cb(e->key, e->value, cookie))
 			return (0);
-		cur = p_hash_next(cur);
 	}
 
 	return (1);
 }
 
-
 struct p_hash_entry *
 p_hash_first(struct p_hash *h)
 {
-	struct p_hash_entry *cur;
-	size_t i;
-
-	for (i = 0; i < h->cap; i++) {
-		cur = h->table[i];
-		if (cur != NULL)
-			return (cur);
-	}
-
-	return (NULL);
+	return (h->first);
 }
 
 struct p_hash_entry *
 p_hash_next(struct p_hash_entry *e)
 {
-
 	return (e->next);
-}
-
-const char *
-p_hash_key(struct p_hash_entry *e)
-{
-	return (e->key);
-}
-
-void *
-p_hash_value(struct p_hash_entry *e)
-{
-	return (e->value);
 }

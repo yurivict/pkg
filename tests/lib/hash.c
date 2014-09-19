@@ -58,37 +58,43 @@ test(const char *key, void *data, void *cookie)
 ATF_TC_BODY(p_hash, tc)
 {
 	struct p_hash *h;
-	struct p_hash_entry *e;
+	char *buf = NULL;
 
-	h = p_hash_new(0, NULL);
+	h = p_hash_new(NULL);
 	ATF_REQUIRE(h != NULL);
-	ATF_REQUIRE_EQ(h->step, BUFSIZ);
-
-	p_hash_free(h);
-
-	h = p_hash_new(2, NULL);
-	ATF_REQUIRE(h != NULL);
-	ATF_REQUIRE_EQ(h->step, 2);
-	ATF_REQUIRE_EQ(h->cap, 2);
+	ATF_REQUIRE_EQ(h->cap, 64);
 	ATF_REQUIRE_EQ(h->len, 0);
 
 	ATF_REQUIRE_EQ(p_hash_insert(h, "plop", "test", NULL), 1);
 	ATF_REQUIRE_EQ(h->len, 1);
 	ATF_REQUIRE_EQ(p_hash_len(h), 1);
+	ATF_REQUIRE(h->first != NULL);
+	ATF_REQUIRE(h->first == h->last);
+	ATF_REQUIRE(h->last->next == NULL);
 	ATF_REQUIRE(p_hash_find(h, "plop") != NULL);
 	ATF_REQUIRE_STREQ(p_hash_find(h, "plop"), "test");
 
 	ATF_REQUIRE_EQ(p_hash_insert(h, "plop", "haha", NULL), 0);
 	ATF_REQUIRE_EQ(h->len, 1);
 	ATF_REQUIRE_EQ(p_hash_rename(h, "plop", "haha"), 1);
+	ATF_REQUIRE(h->first == h->last);
+	ATF_REQUIRE(h->first != NULL);
+	ATF_REQUIRE(h->last->next == NULL);
 	ATF_REQUIRE_EQ(h->len, 1);
 	ATF_REQUIRE(p_hash_find(h, "plop") == NULL);
 	ATF_REQUIRE_STREQ(p_hash_find(h, "haha"), "test");
 
 	ATF_REQUIRE_EQ(p_hash_replace(h, "haha", "hihi", NULL), 1);
 	ATF_REQUIRE_EQ(h->len, 1);
+	ATF_REQUIRE(h->first != NULL);
+	ATF_REQUIRE(h->first == h->last);
+	ATF_REQUIRE(h->last->next == NULL);
 	ATF_REQUIRE_EQ(p_hash_replace(h, "plop", "hihi", NULL), 1);
 	ATF_REQUIRE_EQ(h->len, 2);
+	ATF_REQUIRE(h->first != NULL);
+	ATF_REQUIRE(h->first != h->last);
+	ATF_REQUIRE(h->first->next != NULL);
+	ATF_REQUIRE(h->last->next == NULL);
 
 	int cnt = 0;
 
@@ -98,11 +104,19 @@ ATF_TC_BODY(p_hash, tc)
 	ATF_REQUIRE_EQ(p_hash_foreach(h, test, &cnt), 1);
 	ATF_REQUIRE_EQ(cnt, 2);
 
+	for (int i = 0; i < 200; i++) {
+		asprintf(&buf, "%d", i);
+		ATF_REQUIRE_EQ(p_hash_insert(h, buf, buf, free), 1);
+		ATF_REQUIRE_STREQ(p_hash_find(h, buf), buf);
+	}
+	ATF_REQUIRE_EQ(h->len, 202);
+	ATF_REQUIRE_STREQ(p_hash_find(h, "1"), "1");
+	p_hash_free(h);
 }
 
 ATF_TP_ADD_TCS(tp)
 {
-	ATF_TP_ADD_TC(tp, p_hash); 
+	ATF_TP_ADD_TC(tp, p_hash);
 
 	return (atf_no_error());
 }

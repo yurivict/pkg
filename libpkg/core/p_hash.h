@@ -32,13 +32,22 @@ struct p_hash_entry;
 struct p_hash {
 	size_t len;
 	size_t cap;
-	size_t step;
 	struct p_hash_entry **table;
 	unsigned int (*hash)(const void *, unsigned int, unsigned int);
 	unsigned int cache;
+	struct p_hash_entry *first;
+	struct p_hash_entry *last;
 };
 
-struct p_hash *p_hash_new(size_t sz, unsigned int (*hash_func)(const void*, unsigned int, unsigned int));
+struct p_hash_entry {
+	unsigned int index;
+	char *key;
+	void *value;
+	void (*free)(void *);
+	struct p_hash_entry *next;
+};
+
+struct p_hash *p_hash_new(unsigned int (*hash_func)(const void*, unsigned int, unsigned int));
 
 void p_hash_free(struct p_hash *h);
 int p_hash_insert(struct p_hash *h, const char *key, void *value, void (*freecb)(void*));
