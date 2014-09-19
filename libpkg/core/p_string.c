@@ -28,6 +28,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include "p_string.h"
@@ -36,24 +37,37 @@
 	(p)->buf[(p)->len] = '\0';     \
 } while (0)
 
-static int
-p_string_grow(struct p_string *p)
+#define p_roundup2(x,y) (((x)+((y)-1))&(~((y)-1))) /* if y is powers of two */
+#define STRSIZE 4096
+#define STEPS 64
+
+static bool
+p_string_grow(struct p_string *p, size_t size)
 {
-	p->cap += p->step;
+	size_t newsize;
+
+	if (size < STRSIZE) {
+		newsize = STEPS;
+		while (newsize < size)
+			newsize *=2;
+	} else {
+		newsize = p_roundup2(size, STRSIZE);
+	}
+
+	p->cap = newsize;
 	p->buf = reallocf(p->buf, p->cap * sizeof(char));
 	if (p->buf == NULL)
-		return (0);
+		return (false);
 
-	return (1);
+	return (true);
 }
 
 struct p_string *
-p_string_new(size_t sz)
+p_string_new(void)
 {
 	struct p_string *p;
 
 	p = calloc(1, sizeof(struct p_string));
-	p->step = sz ? sz : BUFSIZ;
 
 	return (p);
 }
@@ -75,14 +89,17 @@ p_string_free(struct p_string *p)
 int
 p_string_append(struct p_string *p, const char *str, size_t len)
 {
+	size_t size;
+
 	if (str == NULL)
 		return (0);
 
 	if (len == 0)
 		len = strlen(str);
 
-	while (p->len + len >= p->cap)
-		if (!p_string_grow(p))
+	size = p->len + len + 1;
+	while (size >= p->cap)
+		if (!p_string_grow(p, size))
 			return (0);
 
 	memcpy(p->buf + p->len, str, len);
@@ -103,8 +120,8 @@ p_string_copy(struct p_string *p, const char *str, size_t len)
 
 	p_string_reset(p);
 
-	while (len >= p->cap)
-		if (!p_string_grow(p))
+	while (len + 1 >= p->cap)
+		if (!p_string_grow(p, len + 1))
 			return (0);
 
 	memcpy(p->buf, str, len);

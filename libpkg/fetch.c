@@ -359,7 +359,7 @@ start_ssh(struct pkg_repo *repo, struct url *u, off_t *sz)
 				return (EPKG_FATAL);
 			}
 
-			cmd = p_string_new(0);
+			cmd = p_string_new();
 			p_string_append(cmd, "/usr/bin/ssh -e none -T ", 0);
 			if (ssh_args != NULL)
 				p_string_printf(cmd, "%s ", ssh_args);
@@ -557,7 +557,7 @@ pkg_fetch_file_to_fd(struct pkg_repo *repo, const char *url, int dest, time_t *t
 		}
 
  
-		fetchOpts = p_string_new(4);
+		fetchOpts = p_string_new();
 		p_string_append(fetchOpts, "i", 0);
 		if (repo != NULL) {
 			if ((repo->flags & REPO_FLAGS_USE_IPV4) ==

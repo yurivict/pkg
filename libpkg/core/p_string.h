@@ -31,10 +31,9 @@ struct p_string {
 	char *buf;
 	size_t len;
 	size_t cap;
-	size_t step;
 };
 
-struct p_string *p_string_new(size_t sz);
+struct p_string *p_string_new(void);
 void p_string_reset(struct p_string *p);
 void p_string_free(struct p_string *p);
 

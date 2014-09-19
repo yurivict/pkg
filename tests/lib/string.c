@@ -39,33 +39,26 @@ ATF_TC_BODY(p_string, tc)
 {
 	struct p_string *p;
 
-	p = p_string_new(0);
+	p = p_string_new();
 	ATF_REQUIRE(p != NULL);
-	ATF_REQUIRE_EQ(p->step, BUFSIZ);
-
-	p_string_free(p);
-
-	p = p_string_new(2);
-	ATF_REQUIRE(p != NULL);
-	ATF_REQUIRE_EQ(p->step, 2);
 	ATF_REQUIRE_EQ(p->cap, 0);
 	ATF_REQUIRE_EQ(p->len, 0);
 
 	p_string_append(p, "test", 0);
-	ATF_REQUIRE_EQ(p->cap, 6);
+	ATF_REQUIRE_EQ(p->cap, 64);
 	ATF_REQUIRE_EQ(p->len, 4);
 	ATF_REQUIRE(p->buf[4] == '\0');
 	ATF_REQUIRE_STREQ(p->buf, "test");
 
 	p_string_append(p, "test", 1);
-	ATF_REQUIRE_EQ(p->cap, 6);
+	ATF_REQUIRE_EQ(p->cap, 64);
 	ATF_REQUIRE_EQ(p->len, 5);
 	ATF_REQUIRE(p->buf[5] == '\0');
 	ATF_REQUIRE_STREQ(p->buf, "testt");
 	ATF_REQUIRE_STREQ(p_string_data(p), "testt");
 
 	p_string_append(p, "  ", 0);
-	ATF_REQUIRE_EQ(p->cap, 8);
+	ATF_REQUIRE_EQ(p->cap, 64);
 	ATF_REQUIRE_EQ(p->len, 7);
 	ATF_REQUIRE_EQ(p_string_len(p), 7);
 	ATF_REQUIRE_STREQ(p->buf, "testt  ");
@@ -76,13 +69,13 @@ ATF_TC_BODY(p_string, tc)
 
 	p_string_reset(p);
 	ATF_REQUIRE(p_string_data(p) == NULL);
-	ATF_REQUIRE_EQ(p->cap, 8);
+	ATF_REQUIRE_EQ(p->cap, 64);
 	ATF_REQUIRE_EQ(p->len, 0);
 
 	p_string_append(p, " plop", 0);
 	p_string_printf(p, "ha %d\n", 12);
 	ATF_REQUIRE_STREQ(p->buf, " plopha 12\n");
-	ATF_REQUIRE_EQ(p->cap, 12);
+	ATF_REQUIRE_EQ(p->cap, 64);
 
 	p_string_ltrim(p);
 	ATF_REQUIRE_STREQ(p->buf, "plopha 12\n");
@@ -100,7 +93,7 @@ ATF_TC_BODY(p_string, tc)
 
 ATF_TP_ADD_TCS(tp)
 {
-	ATF_TP_ADD_TC(tp, p_string); 
+	ATF_TP_ADD_TC(tp, p_string);
 
 	return (atf_no_error());
 }
